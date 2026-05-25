@@ -106,7 +106,7 @@ Same pattern: configure `NemetonMCP` as a stdio MCP server with the two environm
 ┌────────────────┐  JSON-RPC stdio   ┌────────────────┐  HTTP+Bearer   ┌────────────────┐
 │  Claude/Cursor │ ───────────────►  │  NemetonMCP    │ ─────────────► │  Nemeton.app   │
 │  (MCP client)  │ ◄───────────────  │   (this repo)  │ ◄───────────── │  (port 22100)  │
-└────────────────┘                    └────────────────┘                └────────────────┘
+└────────────────┘                   └────────────────┘                └────────────────┘
 ```
 
 The bridge reads JSON-RPC 2.0 requests from `stdin`, forwards them to Nemeton's local HTTP server at `127.0.0.1:22100/mcp`, and writes responses back to `stdout`. All authentication, VM logic, and tool dispatch happens inside the Nemeton app.
