@@ -1,0 +1,12 @@
+{
+  "_comment": "Example Claude Desktop config for Nemeton MCP. Copy the 'nemeton' entry into your ~/Library/Application Support/Claude/claude_desktop_config.json under 'mcpServers'.",
+  "mcpServers": {
+    "nemeton": {
+      "command": "/usr/local/bin/NemetonMCP",
+      "env": {
+        "NEMETON_PORT": "22100",
+        "NEMETON_TOKEN": "<paste-from-nemeton-settings-api-integrations>"
+      }
+    }
+  }
+}
