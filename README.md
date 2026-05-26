@@ -4,6 +4,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue.svg)](https://apple.com/macos)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/protocol-MCP-purple.svg)](https://modelcontextprotocol.io)
+[![juergenkoller-software/nemeton-mcp MCP server](https://glama.ai/mcp/servers/juergenkoller-software/nemeton-mcp/badges/score.svg)](https://glama.ai/mcp/servers/juergenkoller-software/nemeton-mcp)
 
 **Control native macOS virtual machines from Claude Desktop, Claude Code, Cursor, or any MCP client.**
 
