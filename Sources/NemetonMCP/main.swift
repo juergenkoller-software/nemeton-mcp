@@ -3,82 +3,82 @@ import Foundation
 import FoundationNetworking
 #endif
 
-/// MCP stdio-Server für Nemeton.
-/// Liest JSON-RPC 2.0 Requests von stdin, leitet sie an den lokalen HTTP-Server weiter,
-/// und schreibt die Responses nach stdout.
+/// MCP stdio bridge for Nemeton. Reads JSON-RPC 2.0 from stdin, forwards each
+/// request to Nemeton's local HTTP server, writes responses to stdout.
+///
+/// When the app is unreachable (e.g. an offline introspection/registry
+/// container), "initialize" and "tools/list" are answered from a baked-in
+/// static snapshot so MCP directories can discover the tool surface; all other
+/// methods, and live requests when the app IS running, are proxied verbatim.
 
 let serverURL = "http://127.0.0.1:\(ProcessInfo.processInfo.environment["NEMETON_PORT"] ?? "22100")"
 let authToken = ProcessInfo.processInfo.environment["NEMETON_TOKEN"]
+let STATIC_INIT_B64 = "eyJwcm90b2NvbFZlcnNpb24iOiIyMDI0LTExLTA1IiwiY2FwYWJpbGl0aWVzIjp7InRvb2xzIjp7fX0sInNlcnZlckluZm8iOnsibmFtZSI6Ik5lbWV0b24iLCJ2ZXJzaW9uIjoiMC4yLjAifX0="
+let STATIC_TOOLS_B64 = "eyJ0b29scyI6W3sibmFtZSI6Imxpc3Rfdm1zIiwiZGVzY3JpcHRpb24iOiJMaXN0IGFsbCBjb25maWd1cmVkIHZpcnR1YWwgbWFjaGluZXMgd2l0aCB0aGVpciBjdXJyZW50IHN0YXRlLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7fX19LHsibmFtZSI6ImdldF92bSIsImRlc2NyaXB0aW9uIjoiR2V0IGNvbmZpZ3VyYXRpb24gYW5kIGN1cnJlbnQgc3RhdGUgb2YgYSBzaW5nbGUgVk0uIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoiY3JlYXRlX3ZtIiwiZGVzY3JpcHRpb24iOiJDcmVhdGUgYSBuZXcgVk0gZnJvbSBhIExpbnV4IGRpc3RyaWJ1dGlvbiBpbWFnZS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJuYW1lIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUifSwiZGlzdHJvIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IkRpc3RyaWJ1dGlvbiBpZCAoZS5nLiB1YnVudHUsIGRlYmlhbiwgZmVkb3JhLCBhcmNoKSJ9LCJjcHUiOnsidHlwZSI6ImludGVnZXIiLCJkZXNjcmlwdGlvbiI6InZDUFUgY291bnQifSwibWVtb3J5TUIiOnsidHlwZSI6ImludGVnZXIiLCJkZXNjcmlwdGlvbiI6IlJBTSBpbiBNQiJ9LCJkaXNrR0IiOnsidHlwZSI6ImludGVnZXIiLCJkZXNjcmlwdGlvbiI6IkRpc2sgc2l6ZSBpbiBHQiJ9fSwicmVxdWlyZWQiOlsibmFtZSIsImRpc3RybyJdfX0seyJuYW1lIjoidXBkYXRlX3ZtIiwiZGVzY3JpcHRpb24iOiJVcGRhdGUgYSBWTSdzIGNvbmZpZ3VyYXRpb24gKENQVSwgbWVtb3J5LCBldGMuKS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwiY3B1Ijp7InR5cGUiOiJpbnRlZ2VyIn0sIm1lbW9yeU1CIjp7InR5cGUiOiJpbnRlZ2VyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoiY2xvbmVfdm0iLCJkZXNjcmlwdGlvbiI6IkNsb25lIGFuIGV4aXN0aW5nIFZNLCBvcHRpb25hbGx5IHVuZGVyIGEgbmV3IG5hbWUuIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn0sIm5hbWUiOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiTmFtZSBmb3IgdGhlIGNsb25lIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoiZGVsZXRlX3ZtIiwiZGVzY3JpcHRpb24iOiJEZWxldGUgYSBWTSBhbmQgaXRzIGRpc2sgaW1hZ2UuIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoicmVvcmRlcl92bXMiLCJkZXNjcmlwdGlvbiI6IlJlb3JkZXIgdGhlIFZNIGxpc3QuIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsib3JkZXIiOnsidHlwZSI6ImFycmF5IiwiaXRlbXMiOnsidHlwZSI6InN0cmluZyJ9LCJkZXNjcmlwdGlvbiI6IlZNIGlkcyBpbiB0aGUgZGVzaXJlZCBvcmRlciJ9fSwicmVxdWlyZWQiOlsib3JkZXIiXX19LHsibmFtZSI6InN0b3BfYWxsIiwiZGVzY3JpcHRpb24iOiJTdG9wIGFsbCBydW5uaW5nIFZNcy4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6e319fSx7Im5hbWUiOiJzdGFydF92bSIsImRlc2NyaXB0aW9uIjoiU3RhcnQgYSBWTS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJzdG9wX3ZtIiwiZGVzY3JpcHRpb24iOiJHcmFjZWZ1bGx5IHNodXQgZG93biBhIHJ1bm5pbmcgVk0uIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoiZm9yY2Vfc3RvcF92bSIsImRlc2NyaXB0aW9uIjoiSW1tZWRpYXRlbHkgcG93ZXIgb2ZmIGEgVk0uIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoicGF1c2Vfdm0iLCJkZXNjcmlwdGlvbiI6IlBhdXNlIGEgcnVubmluZyBWTS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJyZXN1bWVfdm0iLCJkZXNjcmlwdGlvbiI6IlJlc3VtZSBhIHBhdXNlZCBWTS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJzdXNwZW5kX3ZtIiwiZGVzY3JpcHRpb24iOiJTdXNwZW5kIGEgVk0gdG8gZGlzay4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJnZXRfc3VzcGVuZF9zdGF0dXMiLCJkZXNjcmlwdGlvbiI6IkdldCB0aGUgc3VzcGVuZC9yZXN1bWUgc3RhdHVzIG9mIGEgVk0uIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoibGlzdF9zbmFwc2hvdHMiLCJkZXNjcmlwdGlvbiI6Ikxpc3QgQVBGUyBjb3B5LW9uLXdyaXRlIHNuYXBzaG90cyBvZiBhIFZNLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9fSwicmVxdWlyZWQiOlsidm0iXX19LHsibmFtZSI6ImNyZWF0ZV9zbmFwc2hvdCIsImRlc2NyaXB0aW9uIjoiQ3JlYXRlIGEgY29weS1vbi13cml0ZSBzbmFwc2hvdCBvZiBhIFZNLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9LCJuYW1lIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlNuYXBzaG90IG5hbWUifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJyZXN0b3JlX3NuYXBzaG90IiwiZGVzY3JpcHRpb24iOiJSZXN0b3JlIGEgVk0gdG8gYSBwcmV2aW91cyBzbmFwc2hvdC4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwic25hcHNob3QiOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiU25hcHNob3QgbmFtZSBvciBpZCJ9fSwicmVxdWlyZWQiOlsidm0iLCJzbmFwc2hvdCJdfX0seyJuYW1lIjoiZGVsZXRlX3NuYXBzaG90IiwiZGVzY3JpcHRpb24iOiJEZWxldGUgYSBWTSBzbmFwc2hvdC4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwic25hcHNob3QiOnsidHlwZSI6InN0cmluZyJ9fSwicmVxdWlyZWQiOlsidm0iLCJzbmFwc2hvdCJdfX0seyJuYW1lIjoic2VuZF9jb25zb2xlIiwiZGVzY3JpcHRpb24iOiJTZW5kIHRleHQgb3Iga2V5c3Ryb2tlcyB0byBhIFZNJ3Mgc2VyaWFsIGNvbnNvbGUuIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn0sInRleHQiOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVGV4dCB0byBzZW5kIn19LCJyZXF1aXJlZCI6WyJ2bSIsInRleHQiXX19LHsibmFtZSI6InJlYWRfY29uc29sZSIsImRlc2NyaXB0aW9uIjoiUmVhZCByZWNlbnQgb3V0cHV0IGZyb20gYSBWTSdzIHNlcmlhbCBjb25zb2xlLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9fSwicmVxdWlyZWQiOlsidm0iXX19LHsibmFtZSI6ImNvbnNvbGVfZXhlY3V0ZSIsImRlc2NyaXB0aW9uIjoiUnVuIGEgY29tbWFuZCB2aWEgdGhlIFZNIGNvbnNvbGUgYW5kIHJldHVybiBpdHMgb3V0cHV0LiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9LCJjb21tYW5kIjp7InR5cGUiOiJzdHJpbmcifX0sInJlcXVpcmVkIjpbInZtIiwiY29tbWFuZCJdfX0seyJuYW1lIjoidGFrZV9zY3JlZW5zaG90IiwiZGVzY3JpcHRpb24iOiJDYXB0dXJlIGEgc2NyZWVuc2hvdCBvZiBhIFZNJ3MgZGlzcGxheS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJ2bV9pcCIsImRlc2NyaXB0aW9uIjoiR2V0IHRoZSBJUCBhZGRyZXNzIG9mIGEgcnVubmluZyBWTS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJzc2hfZXhlY3V0ZSIsImRlc2NyaXB0aW9uIjoiUnVuIGEgY29tbWFuZCBpbnNpZGUgYSBWTSBvdmVyIFNTSC4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwiY29tbWFuZCI6eyJ0eXBlIjoic3RyaW5nIn19LCJyZXF1aXJlZCI6WyJ2bSIsImNvbW1hbmQiXX19LHsibmFtZSI6ImZpbGVfdXBsb2FkIiwiZGVzY3JpcHRpb24iOiJVcGxvYWQgYSBmaWxlIGZyb20gdGhlIGhvc3QgaW50byBhIFZNLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9LCJsb2NhbFBhdGgiOnsidHlwZSI6InN0cmluZyJ9LCJyZW1vdGVQYXRoIjp7InR5cGUiOiJzdHJpbmcifX0sInJlcXVpcmVkIjpbInZtIiwibG9jYWxQYXRoIiwicmVtb3RlUGF0aCJdfX0seyJuYW1lIjoiZmlsZV9kb3dubG9hZCIsImRlc2NyaXB0aW9uIjoiRG93bmxvYWQgYSBmaWxlIGZyb20gYSBWTSB0byB0aGUgaG9zdC4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwicmVtb3RlUGF0aCI6eyJ0eXBlIjoic3RyaW5nIn0sImxvY2FsUGF0aCI6eyJ0eXBlIjoic3RyaW5nIn19LCJyZXF1aXJlZCI6WyJ2bSIsInJlbW90ZVBhdGgiLCJsb2NhbFBhdGgiXX19LHsibmFtZSI6ImZpbGVfbGlzdCIsImRlc2NyaXB0aW9uIjoiTGlzdCBmaWxlcyBpbiBhIGRpcmVjdG9yeSBpbnNpZGUgYSBWTS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwicGF0aCI6eyJ0eXBlIjoic3RyaW5nIn19LCJyZXF1aXJlZCI6WyJ2bSIsInBhdGgiXX19LHsibmFtZSI6Imd1aV9sYXVuY2giLCJkZXNjcmlwdGlvbiI6IkxhdW5jaCBhIEdVSSBhcHBsaWNhdGlvbiBpbnNpZGUgYSBWTS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwiYXBwIjp7InR5cGUiOiJzdHJpbmcifX0sInJlcXVpcmVkIjpbInZtIiwiYXBwIl19fSx7Im5hbWUiOiJndWlfd2luZG93cyIsImRlc2NyaXB0aW9uIjoiTGlzdCBvcGVuIEdVSSB3aW5kb3dzIGluIGEgVk0uIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoidnNjb2RlX2NvbW1hbmQiLCJkZXNjcmlwdGlvbiI6IlJ1biBhIFZTIENvZGUgY29tbWFuZCBpbnNpZGUgYSBWTS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwiY29tbWFuZCI6eyJ0eXBlIjoic3RyaW5nIn19LCJyZXF1aXJlZCI6WyJ2bSIsImNvbW1hbmQiXX19LHsibmFtZSI6InNlbGVjdF92bSIsImRlc2NyaXB0aW9uIjoiU2VsZWN0L2ZvY3VzIGEgVk0gaW4gdGhlIE5lbWV0b24gVUkuIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnsidm0iOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiVk0gbmFtZSBvciBpZGVudGlmaWVyIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoiY2xpcGJvYXJkX3JlYWQiLCJkZXNjcmlwdGlvbiI6IlJlYWQgdGhlIHNoYXJlZCBjbGlwYm9hcmQgZnJvbSBhIFZNLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9fSwicmVxdWlyZWQiOlsidm0iXX19LHsibmFtZSI6ImNsaXBib2FyZF93cml0ZSIsImRlc2NyaXB0aW9uIjoiV3JpdGUgdGV4dCB0byBhIFZNJ3Mgc2hhcmVkIGNsaXBib2FyZC4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwidGV4dCI6eyJ0eXBlIjoic3RyaW5nIn19LCJyZXF1aXJlZCI6WyJ2bSIsInRleHQiXX19LHsibmFtZSI6ImdldF9ob3N0X2luZm8iLCJkZXNjcmlwdGlvbiI6IkdldCBob3N0IG1hY2hpbmUgaW5mbyAoQ1BVLCBtZW1vcnksIG1hY09TIHZlcnNpb24pLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7fX19LHsibmFtZSI6ImdldF9tZXRyaWNzIiwiZGVzY3JpcHRpb24iOiJHZXQgaG9zdCByZXNvdXJjZS11c2FnZSBtZXRyaWNzLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7fX19LHsibmFtZSI6InJlc2l6ZV9kaXNrIiwiZGVzY3JpcHRpb24iOiJSZXNpemUgYSBWTSdzIHZpcnR1YWwgZGlzay4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwic2l6ZUdCIjp7InR5cGUiOiJpbnRlZ2VyIn19LCJyZXF1aXJlZCI6WyJ2bSIsInNpemVHQiJdfX0seyJuYW1lIjoiZXhwb3J0X3ZtIiwiZGVzY3JpcHRpb24iOiJFeHBvcnQgYSBWTSB0byBhIHBvcnRhYmxlIGJ1bmRsZS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifSwicGF0aCI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJEZXN0aW5hdGlvbiBwYXRoIn19LCJyZXF1aXJlZCI6WyJ2bSJdfX0seyJuYW1lIjoiaW1wb3J0X3ZtIiwiZGVzY3JpcHRpb24iOiJJbXBvcnQgYSBWTSBmcm9tIGEgYnVuZGxlLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InBhdGgiOnsidHlwZSI6InN0cmluZyIsImRlc2NyaXB0aW9uIjoiUGF0aCB0byB0aGUgVk0gYnVuZGxlIn19LCJyZXF1aXJlZCI6WyJwYXRoIl19fSx7Im5hbWUiOiJsaXN0X2Rpc3Ryb3MiLCJkZXNjcmlwdGlvbiI6Ikxpc3QgYXZhaWxhYmxlIExpbnV4IGRpc3RyaWJ1dGlvbnMgKElTT3MgYXV0by1kb3dubG9hZGVkIG9uIGRlbWFuZCkuIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnt9fX0seyJuYW1lIjoiZnVsbHNjcmVlbl9lbnRlciIsImRlc2NyaXB0aW9uIjoiRW50ZXIgZnVsbHNjcmVlbiBmb3IgYSBWTSBkaXNwbGF5LiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9fSwicmVxdWlyZWQiOlsidm0iXX19LHsibmFtZSI6ImZ1bGxzY3JlZW5fZXhpdCIsImRlc2NyaXB0aW9uIjoiRXhpdCBmdWxsc2NyZWVuIGRpc3BsYXkgbW9kZS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6e319fSx7Im5hbWUiOiJmdWxsc2NyZWVuX3RvZ2dsZSIsImRlc2NyaXB0aW9uIjoiVG9nZ2xlIGZ1bGxzY3JlZW4gZm9yIGEgVk0gZGlzcGxheS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJsaXN0X3dlYmhvb2tzIiwiZGVzY3JpcHRpb24iOiJMaXN0IHJlZ2lzdGVyZWQgd2ViaG9va3MuIiwiaW5wdXRTY2hlbWEiOnsidHlwZSI6Im9iamVjdCIsInByb3BlcnRpZXMiOnt9fX0seyJuYW1lIjoicmVnaXN0ZXJfd2ViaG9vayIsImRlc2NyaXB0aW9uIjoiUmVnaXN0ZXIgYSB3ZWJob29rIGZvciBWTSBsaWZlY3ljbGUgZXZlbnRzLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InVybCI6eyJ0eXBlIjoic3RyaW5nIn0sImV2ZW50cyI6eyJ0eXBlIjoiYXJyYXkiLCJpdGVtcyI6eyJ0eXBlIjoic3RyaW5nIn19fSwicmVxdWlyZWQiOlsidXJsIl19fSx7Im5hbWUiOiJkZWxldGVfd2ViaG9vayIsImRlc2NyaXB0aW9uIjoiRGVsZXRlIGEgcmVnaXN0ZXJlZCB3ZWJob29rLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7ImlkIjp7InR5cGUiOiJzdHJpbmcifX0sInJlcXVpcmVkIjpbImlkIl19fSx7Im5hbWUiOiJ2bV9ydW50aW1lIiwiZGVzY3JpcHRpb24iOiJHZXQgcnVudGltZSBpbmZvIGZvciBhIFZNICh1cHRpbWUsIHJlc291cmNlIHVzYWdlKS4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ2bSI6eyJ0eXBlIjoic3RyaW5nIiwiZGVzY3JpcHRpb24iOiJWTSBuYW1lIG9yIGlkZW50aWZpZXIifX0sInJlcXVpcmVkIjpbInZtIl19fSx7Im5hbWUiOiJ2bV9lcnJvcnMiLCJkZXNjcmlwdGlvbiI6IkdldCByZWNlbnQgZXJyb3JzIHJlcG9ydGVkIGZvciBhIFZNLiIsImlucHV0U2NoZW1hIjp7InR5cGUiOiJvYmplY3QiLCJwcm9wZXJ0aWVzIjp7InZtIjp7InR5cGUiOiJzdHJpbmciLCJkZXNjcmlwdGlvbiI6IlZNIG5hbWUgb3IgaWRlbnRpZmllciJ9fSwicmVxdWlyZWQiOlsidm0iXX19LHsibmFtZSI6Imxpc3RfZG93bmxvYWRzIiwiZGVzY3JpcHRpb24iOiJMaXN0IGRvd25sb2FkZWQgZGlzdHJvIElTT3MgYW5kIHRoZWlyIHN0YXR1cy4iLCJpbnB1dFNjaGVtYSI6eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6e319fV19"
 
 func main() {
     func log(_ msg: String) {
         FileHandle.standardError.write("[\(ISO8601DateFormatter().string(from: Date()))] \(msg)\n".data(using: .utf8)!)
     }
-
-    log("NemetonMCP gestartet (Server: \(serverURL), Token: \(authToken != nil ? "gesetzt" : "–"))")
+    log("NemetonMCP gestartet (Server: \(serverURL), Token: \(authToken != nil ? "gesetzt" : "-"))")
 
     while let line = readLine(strippingNewline: true) {
         guard !line.isEmpty else { continue }
-
-        // JSON-RPC Request validieren
         guard let requestData = line.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: requestData) as? [String: Any],
               json["jsonrpc"] as? String == "2.0" else {
-            let error = jsonRpcError(id: nil, code: -32700, message: "Parse error")
-            writeLine(error)
+            writeLine(jsonRpcError(id: nil, code: -32700, message: "Parse error"))
             continue
         }
-
         let id = json["id"]
         let method = json["method"] as? String ?? ""
+        log("<- \(method)")
 
-        log("← \(method)")
+        if id == nil || (id is NSNull) { continue }  // notification: no response
 
-        // Notifications (kein id) — nur ACK, keine Antwort
-        if id == nil || (id is NSNull) {
-            // Für initialized-Notification nichts senden
-            continue
-        }
-
-        // An lokalen Nemeton-Server weiterleiten
         let semaphore = DispatchSemaphore(value: 0)
         var responseData: Data?
-
         var urlRequest = URLRequest(url: URL(string: "\(serverURL)/mcp")!)
         urlRequest.httpMethod = "POST"
         urlRequest.httpBody = requestData
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.timeoutInterval = 120
-        if let authToken {
-            urlRequest.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
-        }
+        if let authToken { urlRequest.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization") }
 
         let task = URLSession.shared.dataTask(with: urlRequest) { data, response, error in
-            if let error {
-                log("HTTP-Fehler: \(error.localizedDescription)")
-                responseData = jsonRpcError(id: id, code: -32603, message: error.localizedDescription)
-            } else if let data, let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+            if error != nil {
+                // App unreachable: serve static snapshot for discovery methods.
+                if method == "initialize" {
+                    responseData = staticResponse(id: id, b64: STATIC_INIT_B64)
+                } else if method == "tools/list" {
+                    responseData = staticResponse(id: id, b64: STATIC_TOOLS_B64)
+                } else {
+                    responseData = jsonRpcError(id: id, code: -32603, message: error!.localizedDescription)
+                }
+            } else if let data, let http = response as? HTTPURLResponse, http.statusCode == 200 {
                 responseData = data
             } else {
-                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
-                log("HTTP \(statusCode)")
-                responseData = jsonRpcError(id: id, code: -32603, message: "HTTP \(statusCode)")
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                responseData = jsonRpcError(id: id, code: -32603, message: "HTTP \(code)")
             }
             semaphore.signal()
         }
         task.resume()
         semaphore.wait()
-
-        if let data = responseData {
-            log("→ response (\(data.count) bytes)")
-            writeLine(data)
-        }
+        if let data = responseData { writeLine(data) }
     }
-
     log("NemetonMCP beendet")
 }
 
-// MARK: - Helpers
+func staticResponse(id: Any?, b64: String) -> Data {
+    guard let raw = Data(base64Encoded: b64),
+          let result = try? JSONSerialization.jsonObject(with: raw) else {
+        return jsonRpcError(id: id, code: -32603, message: "Static snapshot decode failed")
+    }
+    var response: [String: Any] = ["jsonrpc": "2.0", "result": result]
+    if let id { response["id"] = id }
+    return (try? JSONSerialization.data(withJSONObject: response)) ?? Data()
+}
 
 func writeLine(_ data: Data) {
     FileHandle.standardOutput.write(data)
@@ -86,10 +86,7 @@ func writeLine(_ data: Data) {
 }
 
 func jsonRpcError(id: Any?, code: Int, message: String) -> Data {
-    var response: [String: Any] = [
-        "jsonrpc": "2.0",
-        "error": ["code": code, "message": message]
-    ]
+    var response: [String: Any] = ["jsonrpc": "2.0", "error": ["code": code, "message": message]]
     if let id { response["id"] = id }
     return (try? JSONSerialization.data(withJSONObject: response)) ?? Data()
 }
