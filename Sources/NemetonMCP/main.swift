@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// MCP stdio-Server für Nemeton.
 /// Liest JSON-RPC 2.0 Requests von stdin, leitet sie an den lokalen HTTP-Server weiter,
