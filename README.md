@@ -8,9 +8,9 @@
 
 **Control native macOS virtual machines from Claude Desktop, Claude Code, Cursor, or any MCP client.**
 
-This is the official [Model Context Protocol](https://modelcontextprotocol.io) bridge for [**Nemeton**](https://store.juergenkoller.software/en/apps/nemeton) — a native macOS app that creates and manages Linux and macOS VMs using Apple's `Virtualization.framework` (no Parallels, no VMware, no subscriptions).
+This is the official [Model Context Protocol](https://modelcontextprotocol.io) bridge for [**Nemeton**](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme) — a native macOS app that creates and manages Linux and macOS VMs using Apple's `Virtualization.framework` (no Parallels, no VMware, no subscriptions).
 
-> **You need the Nemeton app installed and running.** This MCP server is a thin stdio→HTTP bridge — the actual VM logic lives in the app. Get Nemeton at [store.juergenkoller.software/apps/nemeton](https://store.juergenkoller.software/en/apps/nemeton).
+> **You need the Nemeton app installed and running.** This MCP server is a thin stdio→HTTP bridge — the actual VM logic lives in the app. Get Nemeton at [store.juergenkoller.software/apps/nemeton](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme).
 
 ---
 
@@ -45,7 +45,7 @@ Each tool returns structured JSON with VM state, snapshot metadata, console outp
 ### Prerequisites
 
 1. **macOS 14 (Sonoma) or later** — required for `Virtualization.framework` features.
-2. **Nemeton app installed and running** — [get it here](https://store.juergenkoller.software/en/apps/nemeton).
+2. **Nemeton app installed and running** — [get it here](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme).
 3. **Swift 5.9+** (Xcode 15+) if you want to build from source. Pre-built binaries are also available.
 
 ### Build from source
@@ -139,7 +139,7 @@ Nemeton is a native macOS app for creating and managing virtual machines using A
 - **Native performance** — uses Apple's framework directly, no QEMU overhead
 - **100% local** — no cloud, no telemetry
 
-→ **[Get Nemeton at store.juergenkoller.software](https://store.juergenkoller.software/en/apps/nemeton)**
+→ **[Get Nemeton at store.juergenkoller.software](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme)**
 
 ---
 
