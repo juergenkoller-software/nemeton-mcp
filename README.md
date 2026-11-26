@@ -8,9 +8,9 @@
 
 **Control native macOS virtual machines from Claude Desktop, Claude Code, Cursor, or any MCP client.**
 
-This is the official [Model Context Protocol](https://modelcontextprotocol.io) bridge for [**Nemeton**](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme) — a native macOS app that creates and manages Linux and macOS VMs using Apple's `Virtualization.framework` (no Parallels, no VMware, no subscriptions).
+This is the official [Model Context Protocol](https://modelcontextprotocol.io) bridge for [**Nemeton**](https://juergenkoller.software/en/nemeton/?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme) — a native macOS app that gives every AI agent its own isolated macOS VM on your company's Macs, built on Apple's `Virtualization.framework` (no Parallels, no VMware).
 
-> **You need the Nemeton app installed and running.** This MCP server is a thin stdio→HTTP bridge — the actual VM logic lives in the app. Get Nemeton at [store.juergenkoller.software/apps/nemeton](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme).
+> **You need the Nemeton app installed and running.** This MCP server is a thin stdio→HTTP bridge — the actual VM logic lives in the app. Get Nemeton at [juergenkoller.software/en/nemeton](https://juergenkoller.software/en/nemeton/?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme).
 
 ---
 
@@ -45,7 +45,7 @@ Each tool returns structured JSON with VM state, snapshot metadata, console outp
 ### Prerequisites
 
 1. **macOS 14 (Sonoma) or later** — required for `Virtualization.framework` features.
-2. **Nemeton app installed and running** — [get it here](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme).
+2. **Nemeton app installed and running** — [get it here](https://juergenkoller.software/en/nemeton/?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme).
 3. **Swift 5.9+** (Xcode 15+) if you want to build from source. Pre-built binaries are also available.
 
 ### Build from source
@@ -129,17 +129,18 @@ Errors and trace logs are written to `stderr` so they don't pollute the JSON-RPC
 
 ## About Nemeton
 
-Nemeton is a native macOS app for creating and managing virtual machines using Apple's `Virtualization.framework`. Highlights:
+Nemeton gives every AI agent its own isolated macOS VM on your own Macs, so agents work in-house and never touch your work Mac. Built for companies. Highlights:
 
-- **No subscription** — one-time purchase, €389
-- **Linux & macOS VMs** with automatic ISO/IPSW download
+- **Isolated** — each agent runs in its own macOS VM on your hardware
+- **Targeted** — via MCP the agent gets exactly the tools the task needs
+- **Visible** — you see every step and approve what the agent may not do on its own
 - **CoW snapshots on APFS** — save VM states without wasting disk
-- **REST API + WebSocket events** (42 endpoints) for automation
-- **MCP server** (this repo) for Claude/AI agents
+- **REST API + WebSocket events** for your own automation
+- **MCP server** (this repo) for Claude and other AI agents
+- **Local AI option** — run Nemeton's assistant on a local model via Ollama
 - **Native performance** — uses Apple's framework directly, no QEMU overhead
-- **100% local** — no cloud, no telemetry
 
-→ **[Get Nemeton at store.juergenkoller.software](https://store.juergenkoller.software/en/apps/nemeton?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme)**
+Business licence: pricing in a personal conversation. → **[Nemeton for companies](https://juergenkoller.software/en/nemeton/?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme)**
 
 ---
 
