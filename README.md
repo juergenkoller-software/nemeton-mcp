@@ -140,7 +140,7 @@ Nemeton gives every AI agent its own isolated macOS VM on your own Macs, so agen
 - **Local AI option** — run Nemeton's assistant on a local model via Ollama
 - **Native performance** — uses Apple's framework directly, no QEMU overhead
 
-Business licence: pricing in a personal conversation. → **[Nemeton for companies](https://juergenkoller.software/en/nemeton/?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme)**
+Business licence: EUR 249 net per Mac and year (annual subscription); companies that register by 15 Dec 2026 get the first year free. → **[Nemeton for companies](https://juergenkoller.software/en/nemeton/?mtm_source=mcp&mtm_medium=agent&mtm_campaign=nemeton-mcp&mtm_content=github-readme)**
 
 ---
 
